@@ -261,7 +261,7 @@ class ExportSitemapHandler extends ExportHandler
             $this->result->stdout("\tГенерация sitemap\n");
 
             $data = [];
-            foreach ($files as $file)
+            foreach ($sitemap as $file)
             {
                 $data[] =
                 [
