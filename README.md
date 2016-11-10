@@ -24,31 +24,31 @@ Configuration app
 ```php
 
 'components' =>
-    [
-        'cmsExport' => [
-            'handlers'     =>
+[
+    'cmsExport' => [
+        'handlers'     =>
+        [
+            'skeeks\cms\exportSitemap\ExportSitemapHandler' =>
             [
-                'skeeks\cms\exportShopYandexMarket\ExportShopYandexMarketHandler' =>
-                [
-                    'class' => 'skeeks\cms\exportShopYandexMarket\ExportShopYandexMarketHandler'
-                ]
+                'class' => 'skeeks\cms\exportSitemap\ExportSitemapHandler'
             ]
-        ],
+        ]
+    ],
 
-        'i18n' => [
-            'translations' =>
-            [
-                'skeeks/exportShopYandexMarket' => [
-                    'class'             => 'yii\i18n\PhpMessageSource',
-                    'basePath'          => '@skeeks/cms/exportShopYandexMarket/messages',
-                    'fileMap' => [
-                        'skeeks/exportShopYandexMarket' => 'main.php',
-                    ],
-                ]
+    'i18n' => [
+        'translations' =>
+        [
+            'skeeks/exportSitemap' => [
+                'class'             => 'yii\i18n\PhpMessageSource',
+                'basePath'          => '@skeeks/cms/exportSitemap/messages',
+                'fileMap' => [
+                    'skeeks/exportSitemap' => 'main.php',
+                ],
             ]
         ]
     ]
-    
+]
+
 ```
 
 ##Links
