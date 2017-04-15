@@ -84,7 +84,7 @@ class ExportSitemapHandler extends ExportHandler
      * @var int
      */
     public $max_urlsets = 2000;
-
+    
 
     public function init()
     {
@@ -120,7 +120,7 @@ class ExportSitemapHandler extends ExportHandler
     public function rules()
     {
         return ArrayHelper::merge(parent::rules(), [
-
+            
             ['content_ids' , 'required'],
             ['content_ids' , 'safe'],
 
@@ -403,7 +403,7 @@ class ExportSitemapHandler extends ExportHandler
     {
         //$string = "2013-08-03T21:14:41+01:00";
         //$string = date("Y-m-d", $model->updated_at) . "T" . date("H:i:s+04:00", $model->updated_at);
-        $string = date("с", $model->updated_at);
+        $string = date("c", $model->updated_at);
 
         return $string;
     }
