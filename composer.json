@@ -22,5 +22,11 @@
         "psr-4": {
             "skeeks\\cms\\exportSitemap\\": ""
         }
+    },
+    "extra": {
+        "config-plugin": {
+            "web": "config/main.php",
+            "console": "config/main-console.php"
+        }
     }
 }
