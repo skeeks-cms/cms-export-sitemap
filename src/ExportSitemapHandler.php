@@ -78,7 +78,7 @@ class ExportSitemapHandler extends ExportHandler
     /**
      * @var string
      */
-    public $site_code = '';
+    public $site_id = '';
 
     /**
      * @var int
@@ -129,7 +129,7 @@ class ExportSitemapHandler extends ExportHandler
             ['base_url' , 'required'],
             ['base_url' , 'url'],
 
-            ['site_code' , 'string'],
+            ['site_id' , 'string'],
             ['sitemaps_dir' , 'string'],
 
             ['max_urlsets' , 'integer'],
@@ -144,7 +144,7 @@ class ExportSitemapHandler extends ExportHandler
             'tree_ids'        => \Yii::t('skeeks/exportShopYandexMarket', 'Выгружаемые категории'),
             'base_url'        => \Yii::t('skeeks/exportShopYandexMarket', 'Базовый url'),
             'sitemaps_dir'        => \Yii::t('skeeks/exportShopYandexMarket', 'Папка частей sitemap'),
-            'site_code'        => \Yii::t('skeeks/exportShopYandexMarket', 'Сайт'),
+            'site_id'        => \Yii::t('skeeks/exportShopYandexMarket', 'Сайт'),
             'max_urlsets'        => \Yii::t('skeeks/exportShopYandexMarket', 'Максимальное количество urlsets в одном файле'),
         ]);
     }
@@ -170,7 +170,7 @@ class ExportSitemapHandler extends ExportHandler
         echo $form->field($this, 'sitemaps_dir');
         echo $form->field($this, 'base_url');
 
-        echo $form->field($this, 'site_code')->listBox(ArrayHelper::merge([null => ' - '],
+        echo $form->field($this, 'site_id')->listBox(ArrayHelper::merge([null => ' - '],
             ArrayHelper::map(CmsSite::find()->all(), 'code', 'name')
         ), ['size' => 1]);
 
@@ -208,9 +208,9 @@ class ExportSitemapHandler extends ExportHandler
 
         $query = Tree::find()
             ->orderBy(['level' => SORT_ASC, 'priority' => SORT_ASC]);
-        if ($this->site_code)
+        if ($this->site_id)
         {
-            $query->where(['site_code' => $this->site_code]);
+            $query->where(['cms_site_id' => $this->site_id]);
         }
         $trees = $query->all();
 

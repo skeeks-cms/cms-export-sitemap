@@ -20,7 +20,7 @@
     },
     "autoload": {
         "psr-4": {
-            "skeeks\\cms\\exportSitemap\\": ""
+            "skeeks\\cms\\exportSitemap\\": "src/"
         }
     },
     "extra": {
