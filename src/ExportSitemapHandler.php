@@ -41,6 +41,7 @@ use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\UrlNormalizer;
 use yii\widgets\ActiveForm;
+use yii\web\View;
 
 /**
  * @property string $rootSitemapsDir
@@ -61,6 +62,11 @@ class ExportSitemapHandler extends ExportHandler
     public $tree_ids = [];
 
     /**
+     * @var null учет типов разделов дерева
+     */
+    public $tree_type_ids = [];
+
+    /**
      * @var null базовый путь сайта
      */
     public $base_url = null;
@@ -69,6 +75,16 @@ class ExportSitemapHandler extends ExportHandler
      * @var null
      */
     public $sitemaps_dir = null;
+
+    /**
+     * @var bool
+     */
+    public $active_tree = true; //Учитывать активность разделов
+
+    /**
+     * @var bool
+     */
+    public $active_content_elem = true; //Учитывать активность элемента
 
     /**
      * @var string путь к результирующему файлу
@@ -124,7 +140,7 @@ class ExportSitemapHandler extends ExportHandler
             ['content_ids' , 'required'],
             ['content_ids' , 'safe'],
 
-            ['tree_ids' , 'safe'],
+            [['tree_ids', 'tree_type_ids'] , 'safe'],
 
             ['base_url' , 'required'],
             ['base_url' , 'url'],
@@ -132,7 +148,7 @@ class ExportSitemapHandler extends ExportHandler
             ['site_id' , 'string'],
             ['sitemaps_dir' , 'string'],
 
-            ['max_urlsets' , 'integer'],
+            [['max_urlsets', 'active_content_elem', 'active_tree'], 'integer'],
 
         ]);
     }
@@ -146,6 +162,9 @@ class ExportSitemapHandler extends ExportHandler
             'sitemaps_dir'        => \Yii::t('skeeks/exportShopYandexMarket', 'Папка частей sitemap'),
             'site_id'        => \Yii::t('skeeks/exportShopYandexMarket', 'Сайт'),
             'max_urlsets'        => \Yii::t('skeeks/exportShopYandexMarket', 'Максимальное количество urlsets в одном файле'),
+            'active_tree' => \Yii::t('skeeks/exportSitemap', 'Active flag to tree'),
+            'active_content_elem' => \Yii::t('skeeks/exportSitemap', 'Active flag to contents element'),
+            'tree_type_ids' => \Yii::t('skeeks/exportSitemap', 'Types of tree'),
         ]);
     }
     public function attributeHints()
@@ -182,6 +201,11 @@ class ExportSitemapHandler extends ExportHandler
                 'mode' => SelectTree::MOD_MULTI
             ]
         );
+        echo $form->fieldSelectMulti($this, 'tree_type_ids', ArrayHelper::map(
+            \skeeks\cms\models\CmsTreeType::find()->all(), 'id', 'name'
+        ));
+        echo $form->field($this, 'active_content_elem')->checkbox(\Yii::$app->formatter->booleanFormat);
+        echo $form->field($this, 'active_tree')->checkbox(\Yii::$app->formatter->booleanFormat);
 
         echo $form->field($this, 'max_urlsets');
     }
@@ -205,7 +229,21 @@ class ExportSitemapHandler extends ExportHandler
                 throw new Exception("Не удалось создать директорию для файла");
             }
         }
+        $result = [];
+        $sitemap = [];
 
+        $this->result->stdout("\tСоздание файла siemap для разделов\n");
+        $result = $this->_addTrees($result);
+
+        if ($result)
+        {
+            $publicUrl = $this->generateSitemapFile('tree.xml', $result);
+            $this->result->stdout("\tФайл успешно сгенерирован: {$publicUrl}\n");
+
+            $sitemap[] = $publicUrl;
+        }
+
+        /*
         $query = Tree::find()
             ->orderBy(['level' => SORT_ASC, 'priority' => SORT_ASC]);
         if ($this->site_id)
@@ -214,17 +252,13 @@ class ExportSitemapHandler extends ExportHandler
         }
         $trees = $query->all();
 
-        $result = [];
-
-        $this->result->stdout("\tСоздание файла siemap для разделов\n");
-
         $sitemap = [];
         if ($trees)
         {
             /**
              * @var Tree $tree
              */
-            foreach ($trees as $tree)
+      /*      foreach ($trees as $tree)
             {
                 if (!$tree->redirect)
                 {
@@ -236,14 +270,12 @@ class ExportSitemapHandler extends ExportHandler
                 }
             }
 
-            $publicUrl = $this->generateSitemapFile('tree.xml', $result);
-            $this->result->stdout("\tФайл успешно сгенерирован: {$publicUrl}\n");
 
-            $sitemap[] = $publicUrl;
         }
-
+*/
         if ($this->content_ids)
         {
+
             $this->result->stdout("\tЭкспорт контента\n");
 
             foreach ($this->content_ids as $contentId)
@@ -290,6 +322,49 @@ class ExportSitemapHandler extends ExportHandler
     }
 
     /**
+     * @param array $data
+     * @return array
+     */
+    protected function _addTrees(&$data = [])
+    {
+        $query = Tree::find();
+
+        if (!empty($this->site_id))
+        {
+            $query->where(['cms_site_id' => $this->site_id]);
+        }
+
+        if ($this->active_tree) {
+            $query->andWhere(['active' => 'Y']);
+        }
+
+        if ($this->tree_type_ids) {
+            $query->andWhere(['tree_type_id' => $this->tree_type_ids]);
+        }
+
+        $trees = $query->orderBy(['level' => SORT_ASC, 'priority' => SORT_ASC])->all();
+
+        $result = [];
+
+        if ($trees) {
+            /**
+             * @var Tree $tree
+             */
+            foreach ($trees as $tree) {
+                if (!$tree->redirect && !$tree->redirect_tree_id) {
+                    $result[] =
+                        [
+                            "loc" => $tree->absoluteUrl,
+                            "lastmod" => $this->_lastMod($tree),
+                        ];
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * @param CmsContent $cmsContent
      * @return array
      * @throws Exception
@@ -302,6 +377,10 @@ class ExportSitemapHandler extends ExportHandler
         $query = CmsContentElement::find()
             ->where(['content_id' => $cmsContent->id])
             ->orderBy(['published_at' => SORT_DESC]);
+
+        if ($this->active_content_elem) {
+            $query->andWhere([CmsContentElement::tableName() . '.active' => 'Y']);
+        }
 
         $countQuery = clone $query;
         $total = $countQuery->count();
