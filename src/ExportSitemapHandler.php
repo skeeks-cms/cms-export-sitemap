@@ -193,7 +193,16 @@ class ExportSitemapHandler extends ExportHandler
             ArrayHelper::map(CmsSite::find()->all(), 'code', 'name')
         ), ['size' => 1]);
 
-        echo $form->fieldSelectMulti($this, 'content_ids', array_merge(['' => ' - '], CmsContent::getDataForSelect()));
+        /*echo $form->fieldSelectMulti($this, 'content_ids', array_merge(['' => ' - '], CmsContent::getDataForSelect()));*/
+
+        echo $form->field($this, 'content_ids')->listBox(
+            CmsContent::getDataForSelect(),
+            //array_merge(['' => ' - '], CmsContent::getDataForSelect()),
+            [
+                'size' => 1,
+                'multiple' => 1,
+            ]
+        );
 
         echo $form->field($this, 'tree_ids')->widget(
             SelectTree::className(),
@@ -216,8 +225,8 @@ class ExportSitemapHandler extends ExportHandler
     public function export()
     {
         //TODO: if console app
-        \Yii::$app->urlManager->baseUrl = $this->base_url;
-        \Yii::$app->urlManager->scriptUrl = $this->base_url;
+        /*\Yii::$app->urlManager->baseUrl = $this->base_url;
+        \Yii::$app->urlManager->scriptUrl = $this->base_url;*/
 
         ini_set("memory_limit", "8192M");
         set_time_limit(0);
@@ -272,8 +281,17 @@ class ExportSitemapHandler extends ExportHandler
             $this->result->stdout("\tЭкспорт контента\n");
 
             foreach ($this->content_ids as $contentId) {
+                if (!$contentId) {
+                    continue;
+                }
+
                 $content = CmsContent::findOne($contentId);
-                $files = $this->_exportContent($content);
+                if (!$content) {
+                    $this->result->stdout("\t\t Content id {$contentId} not found, skipped\n");
+                    continue;
+                }
+
+                $this->_exportContent($content);
             }
         }
 
@@ -349,7 +367,7 @@ class ExportSitemapHandler extends ExportHandler
                     $result[] = $eachCallback($element);
                 } else {
                     $result[] = [
-                        "loc"     => $element->absoluteUrl,
+                        "loc"     => $this->_getElementAbsoluteUrl($element),
                         "lastmod" => $this->_lastMod($element),
                     ];
                 }
@@ -359,9 +377,39 @@ class ExportSitemapHandler extends ExportHandler
             $publicUrl = $this->generateSitemapFile("{$name}_page{$i}.xml", $result);
             $this->result->stdout("\tФайл успешно сгенерирован: {$publicUrl}\n");
             $this->_indexFiles[] = $publicUrl;
+
+            unset($result);
+            $this->_closeDbConnection();
         }
 
         return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    protected function _closeDbConnection()
+    {
+        if (\Yii::$app->has('db', true)) {
+            \Yii::$app->db->close();
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param mixed $element
+     * @return string
+     */
+    protected function _getElementAbsoluteUrl($element)
+    {
+        if ($element instanceof CmsContentElement) {
+            return $element->getUrl(true, [
+                'model' => $element,
+            ]);
+        }
+
+        return $element->absoluteUrl;
     }
 
     /**
